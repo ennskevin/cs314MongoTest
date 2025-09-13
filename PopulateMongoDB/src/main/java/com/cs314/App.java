@@ -36,17 +36,16 @@ public class App {
                 String[] fields = processLine(line);
                 List<Document> batch = new ArrayList<>();
                 int batchCap = 1000;
-                InsertManyOptions options = new InsertManyOptions.ordered(true);
 
                 while((line = reader.readLine()) != null) {
                     String[] values = processLine(line);
                     batch.add(buildDoc(fields, values));
                     if (batch.size() == batchCap) {
-                        collection.insertMany(batch, options);
+                        collection.insertMany(batch);
                         batch.clear();
                     }                   
                 }
-                collection.insertMany(batch, options);
+                collection.insertMany(batch);
                 // recreateIndexes(collection, fields);
             }
             catch (IOException e) {
