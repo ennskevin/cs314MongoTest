@@ -5,6 +5,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Indexes;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -28,7 +29,6 @@ public class App {
         try (MongoClient mongoClient = MongoClients.create(connection)) {
             MongoDatabase database = mongoClient.getDatabase("cs314");
             MongoCollection<Document> collection = database.getCollection("cities");
-            // collection.dropIndexes();
             
             try (InputStream inputStream = App.class.getResourceAsStream("/worldcities.csv");
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
@@ -48,7 +48,7 @@ public class App {
                 if (batch.size() > 0) {
                     collection.insertMany(batch);
                 }
-                // recreateIndexes(collection, fields);
+                createIndexes(collection, fields);
             }
             catch (IOException e) {
                 System.err.println(e.getMessage());
@@ -72,12 +72,11 @@ public class App {
         return doc;
     }
 
-    private static void recreateIndexes(MongoCollection<Document> collection, String[] fields) {
+    private static void createIndexes(MongoCollection<Document> collection, String[] fields) {
         Document indexDoc = new Document();
         for (int i = 0; i < fields.length; i++) {
-            indexDoc.append(fields[i], 1);
+            collection.createIndex(Indexes.ascending(fields[i]));
         }
-        collection.createIndex(indexDoc);
     }
 
 }
