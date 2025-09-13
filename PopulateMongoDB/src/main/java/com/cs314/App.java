@@ -45,7 +45,9 @@ public class App {
                         batch.clear();
                     }                   
                 }
-                collection.insertMany(batch);
+                if (batch.size() > 0) {
+                    collection.insertMany(batch);
+                }
                 // recreateIndexes(collection, fields);
             }
             catch (IOException e) {
