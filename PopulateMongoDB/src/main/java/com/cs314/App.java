@@ -28,13 +28,13 @@ public class App {
         System.out.println();System.out.println();System.out.println();
         int localPort = 27017;
         String connection = "mongodb://localhost:27017";
-        Path csvPath = Paths.get("src/main/resources/testFourMillion.csv");
+        String csvResource = "/testcities.csv";
         
         try (MongoClient mongoClient = MongoClients.create(connection)) {
             MongoDatabase database = mongoClient.getDatabase("cs314");
             MongoCollection<Document> collection = database.getCollection("cities");
             
-            try (InputStream inputStream = App.class.getResourceAsStream("/testFourMillion.csv");
+            try (InputStream inputStream = App.class.getResourceAsStream(csvResource);
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
                 String line = reader.readLine();
                 String[] fields = processLine(line);
