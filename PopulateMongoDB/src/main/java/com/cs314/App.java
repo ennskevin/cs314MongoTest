@@ -16,24 +16,31 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 import org.bson.Document;
 
 public class App {
 
     public static void main( String[] args ) {
+        System.out.println();System.out.println();System.out.println();
+        System.out.println("HELLO");
+        System.out.println();System.out.println();System.out.println();
         int localPort = 27017;
         String connection = "mongodb://localhost:27017";
-        Path csvPath = Paths.get("src/main/resources/worldcities.csv");
+        String csvResource = "/testcities.csv";
         
         try (MongoClient mongoClient = MongoClients.create(connection)) {
             MongoDatabase database = mongoClient.getDatabase("cs314");
             MongoCollection<Document> collection = database.getCollection("cities");
             
-            try (InputStream inputStream = App.class.getResourceAsStream("/worldcities.csv");
+            try (InputStream inputStream = App.class.getResourceAsStream(csvResource);
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
                 String line = reader.readLine();
                 String[] fields = processLine(line);
+                System.out.println();System.out.println();System.out.println();
+                System.out.println(Arrays.toString(fields));
+                System.out.println();System.out.println();System.out.println();
                 List<Document> batch = new ArrayList<>();
                 int batchCap = 1000;
 
@@ -73,9 +80,9 @@ public class App {
     }
 
     private static void createIndexes(MongoCollection<Document> collection, String[] fields) {
-        Document indexDoc = new Document();
         for (int i = 0; i < fields.length; i++) {
-            collection.createIndex(Indexes.ascending(fields[i]));
+            String key = fields[i];
+            collection.createIndex(Indexes.ascending(key));
         }
     }
 
