@@ -23,28 +23,29 @@ import org.bson.Document;
 public class App {
 
     public static void main( String[] args ) {
-        System.out.println();System.out.println();System.out.println();
-        System.out.println("HELLO");
-        System.out.println();System.out.println();System.out.println();
+
         int localPort = 27017;
         String connection = "mongodb://localhost:27017";
-        String csvPath = args[0];
-        String dataConfigPath = args[1];
 
-        String[] fieldsFromConfig;
-        String[] typesFromConfig;
+        String[] fieldsFromConfig = null;
+        String[] types = null;
+
         // open data config csv
+        Path dataConfigPath = Paths.get(args[0]);
         try (BufferedReader reader = Files.newBufferedReader(dataConfigPath)) {
             fieldsFromConfig = processLine(reader.readLine());
-            typesFromConfig = processLine(reader.readLine());
+            types = processLine(reader.readLine());
+        }
+        catch(IOException e) {
+            System.err.println(e.getMessage());
         }
         
         // Open csv
-        Path path = Paths.get(csvPath);
-        try (BufferedReader reader = Files.newBufferedReader(path)) {
+        Path csvPath = Paths.get(args[1]);
+        try (BufferedReader reader = Files.newBufferedReader(csvPath)) {
             String line = reader.readLine();
             String[] fields = processLine(line);
-            if (!validateFields(fields, fieldsFromConfig)) return;
+            if (!Arrays.equals(fields, fieldsFromConfig)) return;
             
             // Connect to db
             try (MongoClient mongoClient = MongoClients.create(connection)) {
@@ -56,7 +57,7 @@ public class App {
                 int batchCap = 1000;
                 while((line = reader.readLine()) != null) {
                     String[] values = processLine(line);
-                    batch.add(buildDoc(fields, values));
+                    batch.add(buildDoc(fields, types, values));
                     if (batch.size() == batchCap) {
                         collection.insertMany(batch);
                         batch.clear();
@@ -81,41 +82,43 @@ public class App {
         return values;
     }
     
-    private static Document buildDoc(String[] fields, String[] values) {
+    private static Document buildDoc(String[] fields, String[] types, String[] values) {
         Document doc = new Document();
         for (int i = 0; i < fields.length; i++) {
-            doc.append(fields[i], values[i]);
+            Object value = parseValue(types[i], values[i]);
+            doc.append(fields[i], value);
         }
         return doc;
+    }
+
+    
+    private static Object parseValue(String type, String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            switch (type.toLowerCase()) {
+                case "int":
+                return Integer.parseInt(value);
+                case "long":
+                return Long.parseLong(value);
+                case "double":
+                return Double.parseDouble(value);
+                case "boolean":
+                return Boolean.parseBoolean(value);
+                case "string":
+                return value;
+                default:
+                return value;
+            }
+        }
+        catch (NumberFormatException e) {
+            return value;
+        }
     }
 
     private static void createIndexes(MongoCollection<Document> collection, String[] fields) {
         for (int i = 0; i < fields.length; i++) {
             String key = fields[i];
             collection.createIndex(Indexes.ascending(key));
-        }
-    }
-
-    private static Boolean validateFields() {
-        return false;
-    }
-
-
-    private static Object parseValue(String value, String type) {
-        if (value == null || value.isEmpty()) return null;
-        switch (type.toLowerCase()) {
-            case "int":
-                return Integer.parseInt(value);
-            case "long":
-                return Long.parseLong(value);
-            case "double":
-                return Double.parseDouble(value);
-            case "boolean":
-                return Boolean.parseBoolean(value);
-            case "string":
-                return value;
-            default:
-                return value;
         }
     }
 }
