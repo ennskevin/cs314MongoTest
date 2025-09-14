@@ -11,7 +11,7 @@ To run PopulateMongoDB, cd into directory and run 'mvn exec:java'
 
 This app does NOT clean up the collection or documents when done.
 
-Load time for 4 million is estimated ~ 25-30 minutes
+Load time for 4 million is ~90 sec
 
 Load time for 40k is < 20 sec
 
