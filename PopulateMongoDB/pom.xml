@@ -57,8 +57,6 @@
     <resource>
       <directory>src/main/resources</directory>
         <includes>
-          <include>worldcities.csv</include>
-          <include>testcities.csv</include>
       </includes>
     </resource>
   </resources>
