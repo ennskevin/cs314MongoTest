@@ -7,8 +7,8 @@ public class App {
         System.out.println("HELLO");
         System.out.println();System.out.println();System.out.println();
         
-        String csvPath = args[0];
-        Populate c = new Populate(csvPath);
+        Query q = new Query();
+        q.getCitiesByRegex("city_ascii", "%denver%");
     }
 
 }
