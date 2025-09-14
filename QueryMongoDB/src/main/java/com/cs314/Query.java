@@ -15,7 +15,7 @@ public class Query {
 
     public Query(){
         try {
-            MongoClient mongoClient = MongoClients.create(Database.connection));
+            MongoClient mongoClient = MongoClients.create(Database.connection);
             MongoDatabase database = mongoClient.getDatabase("cs314");
             collection = database.getCollection("cities");
         } 
