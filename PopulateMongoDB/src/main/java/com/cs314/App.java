@@ -23,32 +23,41 @@ import org.bson.Document;
 public class App {
 
     public static void main( String[] args ) {
-        System.out.println();System.out.println();System.out.println();
-        System.out.println("HELLO");
-        System.out.println();System.out.println();System.out.println();
+
         int localPort = 27017;
         String connection = "mongodb://localhost:27017";
-        String csvPath = args[0];
+
+        String[] fieldsFromConfig = null;
+        String[] types = null;
+
+        // open data config csv
+        Path dataConfigPath = Paths.get(args[0]);
+        try (BufferedReader reader = Files.newBufferedReader(dataConfigPath)) {
+            fieldsFromConfig = processLine(reader.readLine());
+            types = processLine(reader.readLine());
+        }
+        catch(IOException e) {
+            System.err.println(e.getMessage());
+        }
         
-        // Connect to db
-        try (MongoClient mongoClient = MongoClients.create(connection)) {
-            MongoDatabase database = mongoClient.getDatabase("cs314");
-            MongoCollection<Document> collection = database.getCollection("cities");
+        // Open csv
+        Path csvPath = Paths.get(args[1]);
+        try (BufferedReader reader = Files.newBufferedReader(csvPath)) {
+            String line = reader.readLine();
+            String[] fields = processLine(line);
+            if (!Arrays.equals(fields, fieldsFromConfig)) return;
             
-            // Open csv
-            Path path = Paths.get(csvPath);
-            try (BufferedReader reader = Files.newBufferedReader(path)) {
-                String line = reader.readLine();
-                String[] fields = processLine(line);
-                System.out.println();System.out.println();System.out.println();
-                System.out.println(Arrays.toString(fields));
-                System.out.println();System.out.println();System.out.println();
+            // Connect to db
+            try (MongoClient mongoClient = MongoClients.create(connection)) {
+                MongoDatabase database = mongoClient.getDatabase("cs314");
+                MongoCollection<Document> collection = database.getCollection("cities");
+                
+                // Batch and write
                 List<Document> batch = new ArrayList<>();
                 int batchCap = 1000;
-
                 while((line = reader.readLine()) != null) {
                     String[] values = processLine(line);
-                    batch.add(buildDoc(fields, values));
+                    batch.add(buildDoc(fields, types, values));
                     if (batch.size() == batchCap) {
                         collection.insertMany(batch);
                         batch.clear();
@@ -59,9 +68,9 @@ public class App {
                 }
                 createIndexes(collection, fields);
             }
-            catch (IOException e) {
-                System.err.println(e.getMessage());
-            }
+        }
+        catch (IOException e) {
+            System.err.println(e.getMessage());
         }
     }
 
@@ -73,12 +82,37 @@ public class App {
         return values;
     }
     
-    private static Document buildDoc(String[] fields, String[] values) {
+    private static Document buildDoc(String[] fields, String[] types, String[] values) {
         Document doc = new Document();
         for (int i = 0; i < fields.length; i++) {
-            doc.append(fields[i], values[i]);
+            Object value = parseValue(types[i], values[i]);
+            doc.append(fields[i], value);
         }
         return doc;
+    }
+
+    
+    private static Object parseValue(String type, String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            switch (type.toLowerCase()) {
+                case "int":
+                return Integer.parseInt(value);
+                case "long":
+                return Long.parseLong(value);
+                case "double":
+                return Double.parseDouble(value);
+                case "boolean":
+                return Boolean.parseBoolean(value);
+                case "string":
+                return value;
+                default:
+                return value;
+            }
+        }
+        catch (NumberFormatException e) {
+            return value;
+        }
     }
 
     private static void createIndexes(MongoCollection<Document> collection, String[] fields) {
@@ -87,5 +121,4 @@ public class App {
             collection.createIndex(Indexes.ascending(key));
         }
     }
-
 }
