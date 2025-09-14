@@ -29,23 +29,31 @@ public class App {
         int localPort = 27017;
         String connection = "mongodb://localhost:27017";
         String csvPath = args[0];
+        String dataConfigPath = args[1];
+
+        String[] fieldsFromConfig;
+        String[] typesFromConfig;
+        // open data config csv
+        try (BufferedReader reader = Files.newBufferedReader(dataConfigPath)) {
+            fieldsFromConfig = processLine(reader.readLine());
+            typesFromConfig = processLine(reader.readLine());
+        }
         
-        // Connect to db
-        try (MongoClient mongoClient = MongoClients.create(connection)) {
-            MongoDatabase database = mongoClient.getDatabase("cs314");
-            MongoCollection<Document> collection = database.getCollection("cities");
+        // Open csv
+        Path path = Paths.get(csvPath);
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            String line = reader.readLine();
+            String[] fields = processLine(line);
+            if (!validateFields(fields, fieldsFromConfig)) return;
             
-            // Open csv
-            Path path = Paths.get(csvPath);
-            try (BufferedReader reader = Files.newBufferedReader(path)) {
-                String line = reader.readLine();
-                String[] fields = processLine(line);
-                System.out.println();System.out.println();System.out.println();
-                System.out.println(Arrays.toString(fields));
-                System.out.println();System.out.println();System.out.println();
+            // Connect to db
+            try (MongoClient mongoClient = MongoClients.create(connection)) {
+                MongoDatabase database = mongoClient.getDatabase("cs314");
+                MongoCollection<Document> collection = database.getCollection("cities");
+                
+                // Batch and write
                 List<Document> batch = new ArrayList<>();
                 int batchCap = 1000;
-
                 while((line = reader.readLine()) != null) {
                     String[] values = processLine(line);
                     batch.add(buildDoc(fields, values));
@@ -59,9 +67,9 @@ public class App {
                 }
                 createIndexes(collection, fields);
             }
-            catch (IOException e) {
-                System.err.println(e.getMessage());
-            }
+        }
+        catch (IOException e) {
+            System.err.println(e.getMessage());
         }
     }
 
@@ -88,4 +96,26 @@ public class App {
         }
     }
 
+    private static Boolean validateFields() {
+        return false;
+    }
+
+
+    private static Object parseValue(String value, String type) {
+        if (value == null || value.isEmpty()) return null;
+        switch (type.toLowerCase()) {
+            case "int":
+                return Integer.parseInt(value);
+            case "long":
+                return Long.parseLong(value);
+            case "double":
+                return Double.parseDouble(value);
+            case "boolean":
+                return Boolean.parseBoolean(value);
+            case "string":
+                return value;
+            default:
+                return value;
+        }
+    }
 }
