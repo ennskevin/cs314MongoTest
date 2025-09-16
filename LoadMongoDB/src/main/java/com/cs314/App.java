@@ -42,8 +42,8 @@ public class App {
             
             // Connect to db
             try (MongoClient mongoClient = MongoClients.create(Database.connection)) {
-                MongoDatabase database = mongoClient.getDatabase("cs314");
-                MongoCollection<Document> collection = database.getCollection("cities");
+                MongoDatabase database = mongoClient.getDatabase(Database.name);
+                MongoCollection<Document> collection = database.getCollection(Database.collection);
                 
                 // Batch and write
                 List<Document> batch = new ArrayList<>();
