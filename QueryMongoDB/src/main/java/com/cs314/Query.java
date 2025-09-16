@@ -16,8 +16,8 @@ public class Query {
     public Query(){
         try {
             MongoClient mongoClient = MongoClients.create(Database.connection);
-            MongoDatabase database = mongoClient.getDatabase("cs314");
-            collection = database.getCollection("cities");
+            MongoDatabase database = mongoClient.getDatabase(Database.name);
+            collection = database.getCollection(Database.collection);
         } 
         catch (Exception e) {
                 System.err.println(e.getMessage());
