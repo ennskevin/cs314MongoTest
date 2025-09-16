@@ -8,7 +8,7 @@ public class App {
         System.out.println();System.out.println();System.out.println();
         
         Query q = new Query();
-        q.getCitiesByRegex("city_ascii", "%denver%");
+        q.getCitiesInRange("lat", -5, 5);
     }
 
 }
