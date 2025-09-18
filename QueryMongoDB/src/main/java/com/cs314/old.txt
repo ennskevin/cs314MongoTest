@@ -1,0 +1,156 @@
+/* Must add a library for Mariadb and arrange a database port for connection before execution. */
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.lang.Exception;
+
+public class sqlGuide3 {
+
+    private final static String TABLE = "cities";
+    private final static String COLUMN = "city";
+    private final static String MATCH = "dave";
+    private final static Integer limit = 10;
+    private final static String COLUMNS = "city,city_ascii,city_alt,lat,lng,country,admin_name,admin_name_ascii,admin_type,capital,population,population_proper";
+
+    static class Place extends HashMap<String, String> {
+
+    }
+
+    static class Places extends ArrayList<Place> {
+
+    }
+
+    public static void main(String[] args) {
+        try {
+            //near request
+            Places near = Database.places(Select.near(limit), limit);
+            System.out.println("");
+            Report.printPlaces(near);
+            System.out.printf("\nnear, limit: %s, returned: %d\n", limit,
+                    near.size());
+
+            // find request
+            Integer found = Database.found(Select.found(MATCH));
+            Places match = Database.places(Select.match(MATCH, limit), limit);
+            System.out.println("");
+            Report.printPlaces(match);
+            System.out.printf("\nmatch: %s, limit: %s, found: %d, returned: %d\n", MATCH, limit,
+                  found, match.size());
+        } catch (Exception e) {
+            System.err.println("Exception: " + e.getMessage());
+        }
+    }
+
+
+    static class Database {
+
+        static Integer found(String sql) throws Exception {
+
+            try (
+                  // connect to the database and query
+                  Connection conn = DriverManager.getConnection(Credential.URL, Credential.USER,
+                        Credential.PASSWORD);
+                  Statement query = conn.createStatement();
+                  ResultSet results = query.executeQuery(sql)
+            ) {
+                return count(results);
+            } catch (Exception e) {
+                throw e;
+            }
+        }
+
+        private static Integer count(ResultSet results) throws Exception {
+            if (results.next()) {
+                return results.getInt("count");
+            }
+            throw new Exception("No count results in found query.");
+        }
+
+
+        static Places places(String sql, Integer limit) throws Exception {
+            String url = Credential.URL;
+            String user = Credential.USER;
+            String password = Credential.PASSWORD;
+            try (
+                  // connect to the database and query
+                  Connection conn = DriverManager.getConnection(url, user, password);
+                  Statement query = conn.createStatement();
+                  ResultSet results = query.executeQuery(sql)
+            ) {
+                return convertQueryResultsToPlaces(results, COLUMNS);
+            } catch (Exception e) {
+                throw e;
+            }
+        }
+
+
+        private static Places convertQueryResultsToPlaces(ResultSet results, String columns)
+              throws Exception {
+            int count = 0;
+            String[] cols = columns.split(",");
+            Places places = new Places();
+            while (results.next()) {
+                Place place = new Place();
+                for (String col : cols) {
+                    place.put(col, results.getString(col));
+                }
+                place.put("index", String.format("%d", ++count));
+                places.add(place);
+            }
+            return places;
+        }
+
+
+    }
+
+    static class Select {
+
+        static String near(int limit) {
+            // international date line wrapping at 180,-180
+            String where =  " WHERE lat BETWEEN 39.5 AND 40.5 AND lng BETWEEN -105.5 AND -104.5 ";
+            return statement(where, COLUMNS + " ", "LIMIT " + limit);
+        }
+
+        static String found(String match) {
+            String where = " WHERE " + COLUMN + " LIKE \"%" + match + "%\" ";
+            return statement(where, "COUNT(*) AS count ", "");
+        }
+
+        static String match(String match, int limit) {
+            String where = " WHERE " + COLUMN + " LIKE \"%" + match + "%\" ";
+            return statement(where, COLUMNS + " ", "LIMIT " + limit);
+        }
+
+        static String statement(String where, String data, String limit) {
+            return "SELECT "
+                  + data
+                  + " FROM " + TABLE
+                  + where
+                  + limit
+                  + " ;";
+        }
+    }
+
+    static class Credential {
+
+        // shared user with read-only access
+        final static String USER = "cs314-db";
+        final static String PASSWORD = "eiK5liet1uej";
+        // connection information when using port forwarding from localhost
+        final static String URL = "jdbc:mariadb://localhost:3306/cs314";
+    }
+
+    static class Report {
+
+        static void printPlaces(Places places) {
+            for (Place place : places) {
+                System.out.println(place);
+            }
+        }
+    }
+
+}
