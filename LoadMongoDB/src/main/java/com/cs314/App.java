@@ -1,4 +1,5 @@
 package com.cs314;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 
 import org.bson.Document;
 
@@ -20,18 +22,10 @@ public class App {
 
     public static void main( String[] args ) {
 
-        String[] fieldsFromConfig = null;
-        String[] types = null;
+        String[] fieldsFromConfig = {"city","city_ascii","lat","lng","country","iso2","iso3","admin_name","capital","population","id"};
+        String[] types = {"String","String","double","double","String","String","String","String","String","int","long"};
 
-        // open data config csv
-        Path dataConfigPath = Paths.get(args[0]);
-        try (BufferedReader reader = Files.newBufferedReader(dataConfigPath)) {
-            fieldsFromConfig = processLine(reader.readLine());
-            types = processLine(reader.readLine());
-        }
-        catch(IOException e) {
-            System.err.println(e.getMessage());
-        }
+        // open config.properties
         
         // Open csv
         Path csvPath = Paths.get(args[1]);
@@ -48,6 +42,8 @@ public class App {
                 // Batch and write
                 List<Document> batch = new ArrayList<>();
                 int batchCap = 1000;
+                double lat;
+                double lng;
                 while((line = reader.readLine()) != null) {
                     String[] values = processLine(line);
                     batch.add(buildDoc(fields, types, values));
@@ -77,11 +73,37 @@ public class App {
     
     private static Document buildDoc(String[] fields, String[] types, String[] values) {
         Document doc = new Document();
+        Double lat = null;
+        Double lng = null;
+        Boolean pointAdded = false;
         for (int i = 0; i < fields.length; i++) {
-            Object value = parseValue(types[i], values[i]);
-            doc.append(fields[i], value);
+            if (fields[i].equals("lat")){
+                lat = Double.parseDouble(values[i]);
+            }
+            else if (fields[i].equals("lng")){
+                lng = Double.parseDouble(values[i]);
+            }
+            if (lat != null && lng != null && pointAdded == false){
+                appendPoint(doc, lat, lng);
+                pointAdded = true;
+            }
+            else {
+                Object value = parseValue(types[i], values[i]);
+                doc.append(fields[i], value);
+            }
         }
         return doc;
+    }
+
+    private static void appendPoint(Document doc, Double lat, Double lng){
+        Document embeddedDoc = new Document();
+        embeddedDoc.append("type", "Point");
+        List<Double> coordinates = new ArrayList<>();
+        coordinates.add(lng);
+        coordinates.add(lat);
+        embeddedDoc.append("coordinates", coordinates);
+        String column = "location";
+        doc.append(column, embeddedDoc);
     }
 
     
@@ -111,6 +133,10 @@ public class App {
     private static void createIndexes(MongoCollection<Document> collection, String[] fields) {
         for (int i = 0; i < fields.length; i++) {
             String key = fields[i];
+            if (key.equals("location")) {
+                collection.createIndex(Indexes.geo2dsphere(key));
+                continue;
+            }
             collection.createIndex(Indexes.ascending(key));
         }
     }
