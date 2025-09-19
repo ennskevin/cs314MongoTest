@@ -1,6 +1,7 @@
 package com.cs314;
 
 import java.io.BufferedReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -21,11 +22,31 @@ import com.mongodb.client.model.Indexes;
 public class App {
 
     public static void main( String[] args ) {
+        if (args.length != 2) {
+            System.err.println("2 args only: <config.properties> and <cities>.csv needed");
+            return;
+        }
+
+        // open config.properties and instantiate Database object
+        Database db = null;
+        Properties properties = new Properties();
+        String propertiesPath = args[0];
+        try (FileInputStream fis = new FileInputStream(propertiesPath)) {
+            properties.load(fis);
+            db = new Database(Integer.parseInt(properties.getProperty("db.port")),
+                properties.getProperty("db.user"),
+                properties.getProperty("db.password"),
+                properties.getProperty("db.name"),
+                properties.getProperty("db.collection"));
+
+        }
+        catch (IOException e) {
+            System.err.println(e.getMessage());
+        }
 
         String[] fieldsFromConfig = {"city","city_ascii","lat","lng","country","iso2","iso3","admin_name","capital","population","id"};
         String[] types = {"String","String","double","double","String","String","String","String","String","int","long"};
 
-        // open config.properties
         
         // Open csv
         Path csvPath = Paths.get(args[1]);
@@ -35,9 +56,9 @@ public class App {
             if (!Arrays.equals(fields, fieldsFromConfig)) return;
             
             // Connect to db
-            try (MongoClient mongoClient = MongoClients.create(Database.connection)) {
-                MongoDatabase database = mongoClient.getDatabase(Database.name);
-                MongoCollection<Document> collection = database.getCollection(Database.collection);
+            try (MongoClient mongoClient = MongoClients.create(db.connection)) {
+                MongoDatabase database = mongoClient.getDatabase(db.name);
+                MongoCollection<Document> collection = database.getCollection(db.collection);
                 
                 // Batch and write
                 List<Document> batch = new ArrayList<>();
@@ -83,13 +104,13 @@ public class App {
             else if (fields[i].equals("lng")){
                 lng = Double.parseDouble(values[i]);
             }
-            if (lat != null && lng != null && pointAdded == false){
-                appendPoint(doc, lat, lng);
-                pointAdded = true;
-            }
             else {
                 Object value = parseValue(types[i], values[i]);
                 doc.append(fields[i], value);
+            }
+            if (lat != null && lng != null && pointAdded == false){
+                appendPoint(doc, lat, lng);
+                pointAdded = true;
             }
         }
         return doc;

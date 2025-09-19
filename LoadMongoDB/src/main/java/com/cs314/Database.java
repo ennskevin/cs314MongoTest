@@ -1,11 +1,19 @@
 package com.cs314;
 
 public final class Database {
-    public static final int port = 27017;
-    public static final String user = "readWriter";
-    public static final String password = "password";
-    public static final String name = "cs314";
-    public static final String collection = "cities";
+    public final int port;
+    public final String user;
+    public final String password;
+    public final String name;
+    public final String collection;
 
-    public static final String connection = String.format("mongodb://%s:%s@localhost:%d/?authSource=admin", user,password,port);
+    public final String connection;
+    public Database(int port, String user, String password, String name, String collection) {
+        this.port = port;
+        this.user = user;
+        this.password = password;
+        this.name = name;
+        this.collection = collection;
+        this.connection = String.format("mongodb://%s:%s@localhost:%d/?authSource=admin", user,password,port);
+    }
 }
